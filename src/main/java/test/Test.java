@@ -131,8 +131,8 @@ public class Test {
           System.out.println(e.getMessage());
       }*/
 
-      DateTime now = new DateTime().withDayOfMonth(1).withTime(0,0,0,0);
-      System.out.println(now);
+      DateTime now = new DateTime().minusMonths(1).withDayOfMonth(1).withTime(0,0,0,0);
+      System.out.println(now.getMillis());
 
 
       /*Runtime r = Runtime.getRuntime();
