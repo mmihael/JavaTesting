@@ -1,0 +1,94 @@
+Content-Type: application/json
+User-Agent: java/socket
+
+#set($first = true)
+##
+{##
+"results":[##
+#foreach($msg in $pushMessages)
+#if($first)
+#set($first = false)
+#set($outputServiceTypeId = $msg.outputServiceTypeId)
+#set($channelId = $msg.channelId)
+#else
+,##
+#end
+#set($payload = $msg.payload)
+#set($isoDateTime = $DateTimeUtils.composeFormattedTime(${payload.receivedDateTime}, 0, "yyyy-MM-dd'T'HH:mm:ss.SSSZ"))## Always UTC timezone
+#set($currency = $PriceUtils.getCurrency($payload.currencyId))
+{##
+"from":##
+#if(${payload.srcAddress})
+#if(${msg.outputPushFormatId} == 16)## no encryption for FB push formats (for now)
+"${payload.srcAddress}",##
+#else
+"$TripleDesEncryption.toIBCrypted(${payload.srcAddress})",##
+#end
+#else
+null,##
+#end
+"to":##
+#if(${payload.destAddress})
+"$TripleDesEncryption.toIBCrypted(${payload.destAddress})",##
+#else
+null,##
+#end
+"integrationType":##
+#if(${payload.requestTypeId})
+#if(${payload.requestTypeId} == 40)
+"VIBER",
+#elseif(${payload.requestTypeId} == 44)
+"FACEBOOK",
+#elseif(${payload.requestTypeId} == 45)
+"LINE",
+#elseif(${payload.requestTypeId} == 49)
+"TELEGRAM",
+#elseif(${payload.requestTypeId} == 51)
+"WECHAT",
+#else
+null,
+#end
+#else
+null,##
+#end
+"receivedAt":"${isoDateTime}",##
+"messageId":##
+#if(${msg.externalMessageId})
+"${msg.externalMessageId}",##
+#else
+null,##
+#end
+"pairedMessageId":##
+#if(${payload.pairedMessageId})
+"${payload.pairedMessageId}",##
+#else
+null,##
+#end
+"callbackData":##
+#if(${payload.clientMetadata})
+$RendererUtils.toEscapedJson(${payload.clientMetadata})##
+#else
+null##
+#end,
+"message":##
+#if(${payload.gatewayData} && ${payload.gatewayData.message})
+$RendererUtils.mapToJson($payload.gatewayData.message),##
+#else
+null,##
+#end
+"price":{##
+"pricePerMessage":$NumberTool.format("#0.000000", ${payload.pricePerMessage})##
+,"currency":##
+#if($currency && $currency.hnbCode)
+$RendererUtils.toEscapedJson($currency.hnbCode)##
+#else
+$RendererUtils.toEscapedJson("UNKNOWN")##
+#end
+}
+}##
+#end
+],##
+"messageCount":$pushMessages.size(),##
+#set($pending = $PushMessageStore.getMessageCount($channelId, $outputServiceTypeId) - $pushMessages.size())
+"pendingMessageCount":$pending##
+}
